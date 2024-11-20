@@ -7,6 +7,8 @@ class LoadException(Exception):
     pass
 
 
+
+
 def load(plugin: CiPlugin, context: dict) -> dict:
     """ Load the software on to the target platform delegating to the selected plugin
 
