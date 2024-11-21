@@ -1,30 +1,40 @@
 #!/usr/bin/env python3
-import subprocess
 import argparse
+import requests
+import subprocess
 
 maxPowerOutlets = 8
 
 def setPowerOutletState(ip: str, user: str, pword: str, outletNumber: int, state: bool):
+
+  # Checkout outlet number is within expected range
   if outletNumber < 1 or outletNumber > maxPowerOutlets:
     print("[ERROR]: Specified Outlet Number {} is out of range [{}, {}].".format(outletNumber, 1, maxPowerOutlets))
     exit(2)
 
+  # Convert boolean to string
   stateStr = "true" if state else "false"
-  print("output number {} state {}".format(outletNumber, stateStr))
 
-  cmd = 'curl --digest -u {}:{} -X PUT -H "X-CSRF: x" --data "value={}" http://{}/restapi/relay/outlets/{}/state/'.format(user, pword, stateStr, ip, outletNumber)
-  cmdToks = ['curl', '--digest', '-u', 'admin:1234', '-X', 'PUT', '-H', '"X-CSRF: x"', '--data', 'value=true', 'http://192.168.0.100/restapi/relay/outlets/1/state/']
-  print(cmd)
-  print(cmdToks)
-  result = subprocess.run(cmdToks, capture_output=True, text=True)
+  # Prepare the request to power on/off outlet
+  powerOnUrl = "http://{}/restapi/relay/outlets/{}/state/".format(ip, outletNumber)
+  payload = "value={}".format(stateStr)
+  headers = {
+    "X-CSRF": "x",  # Custom header
+    "Content-Type": "application/x-www-form-urlencoded"  # Ensures correct encoding
+  }
+  auth = requests.auth.HTTPDigestAuth(args.user, args.pword)
 
-  if result.returncode != 0:
-    print("[Error]: {}".format(result.stderr))
-    print("Failed to update outlet {} to {}. Exiting".format(outletNumber, stateStr))
-    exit(3)
+  # Send request
+  response = requests.put(powerOnUrl, data=payload, headers=headers, auth=auth)
 
-  print("Set outlet {} to {}.".format(outletNumber, stateStr))
-  
+  # Report of request was a success or failure
+  if response.status_code == 200 or response.status_code == 204:
+    print("Successfully set outlet {} to {}.".format(outletNumber, stateStr))
+    print(response.text)
+  else:
+    print("Failed to set outlet {} to {}.".format(outletNumber, stateStr))
+    print(response.text)
+
 def showPowerSupplyStatus(ip: str, user: str, pword: str):
   cmd = 'curl -k -u {}:{} -H "Accept:application/json" --digest https://{}/restapi/relay/outlets/all;/physical_state/'.format(user, pword, ip)
   cmdToks = cmd.split()
@@ -50,7 +60,6 @@ if __name__ == "__main__":
   ap.add_argument("--user", "-u", type=str, default="admin", help="The user name. Default is %(default)s.")
   ap.add_argument("--pword", "-p", type=str, default="1234", help="The user name's pass. Default is %(default)s.")
   args = ap.parse_args()
-  print(args)
 
   if(args.status):
     showPowerSupplyStatus(args.ip, args.user, args.pword)
@@ -58,37 +67,3 @@ if __name__ == "__main__":
     setPowerOutletState(args.ip, args.user, args.pword, args.on, True)
   if(args.off):
     setPowerOutletState(args.ip, args.user, args.pword, args.off, False)
-
-'''
-cmd = 'curl -k -u admin:1234 -H "Accept:application/json" --digest https://192.168.0.100/restapi/relay/outlets/2/physical_state/'
-cmdToks = cmd.split()
-result = subprocess.run(cmdToks, capture_output=True, text=True)
-
-# Print the standard output and error
-print("Output:", result.stdout)
-#print("Error:", result.stderr)
-#print("Return Code:", result.returncode)
-
-'''
-
-'''
-import requests
-from requests.auth import HTTPBasicAuth
-
-with requests.Session() as se:
-  url = "http://192.168.0.100"
-  auth = HTTPBasicAuth("admin", "1234")
-  response = se.get(url, auth=auth, verify=False)
-  print(response)
-  url = "http://192.168.0.100/outlet"
-  params = {"1": "ON"}
-  response = se.get(url, params=params, verify=False)
-  print(response)
-
-
-#response = requests.get(url, auth=auth, params=params, verify=False, timeout=30)
-#response = requests.get(url, auth=auth, verify=False)
-
-#print(response)
-#print(response.text)
-'''
