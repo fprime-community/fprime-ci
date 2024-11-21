@@ -1,10 +1,14 @@
-import fprime_ci.plugin # Force this to run first to achieve monkey patching
+import fprime_ci.plugin.system # Force this to run first to achieve monkey patching
 import fprime_gds.executables.cli
-from fprime_ci.load import load
 
 import logging
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
+
+
+
+
+
 
 def main():
     """ Main function """
@@ -16,7 +20,6 @@ def main():
     )
     LOGGER.info(f"Starting CI for '{args.ci_selection}'")
     plugin = args.ci_selection_instance
-    load(plugin, {})
 
 
 if __name__ == "__main__":

@@ -1,39 +1,31 @@
-""" fprime_ci_plugins/vxworks.py: vxworks CI implementation
-
-This module supplies basic VxWorks CI plugins. These basic implementations will build and run VxWorks builds using
-TFTP to provide boot modules and RSH to provide Downloadable Kernel Modules (DKMs). This plugin assumes certain
-infrastructure is available on the host machine:
-
-1. A docker container running with TFTP and RSH installed
-2. The target hardware bootloader is configured for TFTP boot
-"""
+""" fprime_ci.plugin.null: null plugin for CI """
+import json
 from typing import Type
-import serial
 
-import fprime_gds.plugin.definitions
-from fprime_ci.plugin import CiPlugin
+from fprime_ci.plugin.definitions import ci_plugin_implementation, plugin
+from fprime_ci.ci import Ci
 
-
-
-class VxWorksCI(CiPlugin):
-    """ VxWorks CI plugin implementation """
-    def __init__(self, serial_port, baud_rate, flow_control: False):
-        """  """
-        self.port = serial.Serial(serial_port, baud_rate, rtscts=flow_control)
+@plugin
+class NullPlugin(Ci):
+    """ NullPlugin - prints out steps """
 
     def build(self, context: dict) -> dict:
-        """ Performs the VxWorks build before the standard F Prime build
+        """ Plugin override for setting up the build
 
-        This build step will perform the VxWorks image build providing the uVxWorks and dtb files required for loading.
-        It expects the bootloader is configured to use the uVxWorks and dtb files correctly.
+        Developers may set the fields "platform", "generate_arguments", and "build_arguments" to customize the build
+        step. When not set, the default `settings.ini` supplied settings will apply to the build.  The build will be run
+        without additional arguments.
 
-        This implementation ops not to set any arguments as the settings.ini should be sufficient.
+        Developers can perform other build steps here (e.g. building an OS kernel to link against).
+
+        This default implementation is a no-op where all expected settings will default to settings.ini.
 
         Args:
             context: build context aggregated across all build steps
         Returns:
             context with optionally set platform, generated_arguments and build_argument
         """
+        print(f"[INFO] Build step run with context:\n{json.dumps(context, indent=4)}")
         return context
 
     def preload(self, context: dict):
@@ -52,8 +44,7 @@ class VxWorksCI(CiPlugin):
         Returns:
             context optionally augmented with plugin-specific preload data
         """
-        # TODO: copy files to remoted area and list in context
-        context["dkm_path"] = f"data/{context['deployment_name']}"
+        print(f"[INFO] Preload run with context:\n{json.dumps(context, indent=4)}")
         return context
 
     def load(self, context: dict):
@@ -73,13 +64,8 @@ class VxWorksCI(CiPlugin):
         Returns:
             context optionally augmented with plugin-specific preload data
         """
-        # Wait for receiving the VxWorks emitted '>' indicating a terminal prompt
-        while self.port.read(1) != b">":
-            pass
-        load_string = f"ld < {context['dkm_path']}"
-        self.port.write(load_string.encode("ascii"))
+        print(f"[INFO] Load run with context:\n{json.dumps(context, indent=4)}")
         return context
-
 
     def launch(self, context: dict):
         """ Launch the software on the target hardware
@@ -94,13 +80,15 @@ class VxWorksCI(CiPlugin):
         Args:
             context: build context aggregated across all build steps
         """
-        #TODO: wait for acknowledge
-        launch_string = f'fsw_main("192.168.8.1", 50000)'
-        self.port.write(launch_string .encode("ascii"))
+        print(f"[INFO] Preload run with context:\n{json.dumps(context, indent=4)}")
         return context
 
     @classmethod
-    @fprime_gds.plugin.definitions.gds_plugin_implementation
-    def register_ci_plugin(cls) -> Type["CiPlugin"]:
-        """ Allows loading of Ci plugin"""
-        return VxWorksCI
+    def get_name(cls):
+        """ Return the name of the plugin """
+        return "null"
+
+    @classmethod
+    def get_arguments(cls):
+        """ Return the name of the plugin """
+        return {}

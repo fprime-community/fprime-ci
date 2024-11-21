@@ -1,0 +1,23 @@
+""" fprime_ci/plugin/definitions.py: standard definitions overridden to be used in CI
+
+The F Prime GDS provides a plugin system, however; to reuse it in CI some changes (monkey patches) are required to make
+it all work. This file sets up plugin definitions and performs the necessary monkey patching.
+"""
+from typing import Type
+import fprime_gds.plugin.definitions
+fprime_gds.plugin.definitions.PLUGIN_NAME = "fprime_ci" # Monkey-patch the plugin-system name
+
+from fprime_gds.plugin.definitions import gds_plugin_implementation as ci_plugin_implementation
+from fprime_gds.plugin.definitions import gds_plugin_specification as ci_plugin_specification
+from fprime_gds.plugin.definitions import PluginType
+
+def plugin(plugin_class):
+    """ Decorator for plugin class"""
+    @ci_plugin_implementation
+    def register_ci_plugin(cls) -> Type["Ci"]:
+        """ Allows loading of Ci plugin"""
+        return plugin_class
+
+    plugin_class.register_ci_plugin = register_ci_plugin
+    plugin_class.register_ci_plugin = classmethod(plugin_class. register_ci_plugin)
+    return plugin_class
