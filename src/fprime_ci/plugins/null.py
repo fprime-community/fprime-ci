@@ -6,7 +6,7 @@ from fprime_ci.plugin.definitions import ci_plugin_implementation, plugin
 from fprime_ci.ci import Ci
 
 @plugin
-class NullPlugin(Ci):
+class Null(Ci):
     """ NullPlugin - prints out steps """
 
     def build(self, context: dict) -> dict:

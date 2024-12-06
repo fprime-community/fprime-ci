@@ -1,7 +1,10 @@
+""" fprime_ci.power: network power supply functions
+
+@author ortega
+"""
 import argparse
 import logging
 import requests
-import subprocess
 
 maxPowerOutlets = 8
 

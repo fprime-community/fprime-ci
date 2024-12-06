@@ -7,19 +7,46 @@ infrastructure is available on the host machine:
 1. A docker container running with TFTP and RSH installed
 2. The target hardware bootloader is configured for TFTP boot
 """
+import logging
 from typing import Type
 import serial
 
 import fprime_gds.plugin.definitions
-from fprime_ci.plugin import CiPlugin
+from fprime_ci.ci import Ci
+from fprime_ci.plugin.definitions import plugin
 
+LOGGER = logging.getLogger(__name__)
 
-
-class VxWorksCI(CiPlugin):
-    """ VxWorks CI plugin implementation """
-    def __init__(self, serial_port, baud_rate, flow_control: False):
+@plugin
+class VxWorksDkm(Ci):
+    """ VxWorks CI plugin implementation supporting DKMs """
+    def __init__(self, port, baud, flow:str="no"):
         """  """
-        self.port = serial.Serial(serial_port, baud_rate, rtscts=flow_control)
+        self.port = serial.Serial()
+        self.port.port = port
+        self.port.baudrate = baud
+        self.port.rtscts = flow == "yes"
+
+    def write_to_vxworks(self, message: bytes):
+        """ Write to the serial port """
+        assert self.port.is_open, "Serial port is not open"
+        LOGGER.debug(">  " + message.decode("ascii").strip())
+        self.port.write(message + b"\r\n")
+
+    def wait_for_vxprompt(self):
+        """ Wait for the vxprompt to be ready """
+        assert self.port.is_open, "Serial port is not open"
+        message = b""
+        while message != b"-> ":
+            byte_read = self.port.read(1)
+            if len(byte_read) == 1 and byte_read[0] < 128:
+                message += byte_read
+                if byte_read == b"\n":
+                    LOGGER.debug("<  " + message.decode("ascii").strip())
+                    message = b""
+            else:
+                LOGGER.warning("Read non-ascii data from serial port")
+        LOGGER.debug("<  " + message.decode("ascii").strip())
 
     def build(self, context: dict) -> dict:
         """ Performs the VxWorks build before the standard F Prime build
@@ -53,7 +80,7 @@ class VxWorksCI(CiPlugin):
             context optionally augmented with plugin-specific preload data
         """
         # TODO: copy files to remoted area and list in context
-        context["dkm_path"] = f"data/{context['deployment_name']}"
+        context["dkm_path"] = f"data/{context['deployment-name']}"
         return context
 
     def load(self, context: dict):
@@ -73,11 +100,15 @@ class VxWorksCI(CiPlugin):
         Returns:
             context optionally augmented with plugin-specific preload data
         """
-        # Wait for receiving the VxWorks emitted '>' indicating a terminal prompt
-        while self.port.read(1) != b">":
-            pass
-        load_string = f"ld < {context['dkm_path']}"
-        self.port.write(load_string.encode("ascii"))
+        try:
+            self.port.open()
+            self.wait_for_vxprompt()
+            load_string = f"ld < {context['dkm_path']}"
+            self.write_to_vxworks(load_string.encode("ascii"))
+        except serial.SerialException as exception:
+            raise Exception(f"Failed to use serial port: {exception}")
+        finally:
+            self.port.close()
         return context
 
 
@@ -95,12 +126,41 @@ class VxWorksCI(CiPlugin):
             context: build context aggregated across all build steps
         """
         #TODO: wait for acknowledge
-        launch_string = f'fsw_main("192.168.8.1", 50000)'
-        self.port.write(launch_string .encode("ascii"))
+        try:
+            self.port.open()
+            self.wait_for_vxprompt()
+            load_string = f"sp main"
+            self.write_to_vxworks(load_string.encode("ascii"))
+            self.wait_for_vxprompt()
+        except serial.SerialException as exception:
+            raise Exception(f"Failed to use serial port: {exception}")
+        finally:
+            self.port.close()
         return context
 
     @classmethod
-    @fprime_gds.plugin.definitions.gds_plugin_implementation
-    def register_ci_plugin(cls) -> Type["CiPlugin"]:
-        """ Allows loading of Ci plugin"""
-        return VxWorksCI
+    def get_name(cls):
+        """ Returns the name of the plugin """
+        return "vxworks-dkm"
+
+    @classmethod
+    def get_arguments(cls):
+        """ Returns the arguments of the plugin """
+        return {
+            ("--port",): {
+                "type": str,
+                "default": "/dev/ttyUSB0",
+                "help": "Serial port used to communicate with VxWorks",
+            },
+            ("--baud",): {
+                "type": int,
+                "default": 115200,
+                "help": "Baud rate for the serial interface",
+            },
+            ("--flow",): {
+                "default": "no",
+                "type": str,
+                "help": "Whether to enable flow control on the serial interface. Default: no",
+            }
+
+        }

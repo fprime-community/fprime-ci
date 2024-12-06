@@ -7,7 +7,8 @@ import fprime_ci.plugin.definitions # Monkey-patch the definitions
 
 # Usable types
 from fprime_ci.plugin.definitions import PluginType
-from fprime_ci.plugin.null import NullPlugin
+from fprime_ci.plugins.null import Null
+from fprime_ci.plugins.vxworks import VxWorksDkm
 from fprime_ci.ci import Ci
 
 
@@ -15,7 +16,7 @@ _PLUGIN_METADATA = {
     "ci": {
         "class": Ci,
         "type": PluginType.SELECTION,
-        "built-in": [NullPlugin]
+        "built-in": [Null, VxWorksDkm]
     }
 }
 fprime_gds.plugin.system._PLUGIN_METADATA = _PLUGIN_METADATA # Monkey-patch our metadata
