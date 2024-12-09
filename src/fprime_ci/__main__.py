@@ -18,6 +18,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Fprime CI")
     parser.add_argument("-c", "--config", type=argparse.FileType('r'),
                         help="YAML configuration file used to populate arguments")
+    parser.add_argument("--add-stage", action="append",
+                        help="Add a stage to run. When unspecified all stages will run.")
+    parser.add_argument("--skip-stage", action="append",
+                        help="Skip a stage. When unspecified all stages will run.")
     # Grab the args namespace and get the configuration file
     args_ns = parser.parse_args()
     config = yaml.load(args_ns.config, Loader=yaml.SafeLoader)
@@ -39,7 +43,9 @@ def main():
 
     ci_flow = CiFlow(plugin)
     try:
-        ci_flow.run(context=initial_config)
+        stages = CiFlow.get_stages() if not "add_stage" in args else args.add_stage
+        stages = [stage for stage in stages if "skip_stage" not in args or stage not in args.skip_stage]
+        ci_flow.run(context=initial_config, stages=stages)
     except Exception as exception:
         LOGGER.critical("Failed to run CI: %s", exception)
         sys.exit(1)

@@ -152,6 +152,12 @@ class CiFlow(Ci):
         self.delegate = plugin_delegate
         self.gds_instance = None
 
+    @staticmethod
+    def get_stages():
+        """ Return the list of annotated stages """
+        return _CI_STAGES
+
+
     @stage
     def build(self, context: dict):
         """ Build the software on the target hardware """
@@ -255,4 +261,4 @@ class CiFlow(Ci):
             LOGGER.info("Finished running stages: %s", stages)
             LOGGER.info("CI success!")
         finally:
-            self.cleanup()
+            self.cleanup(context)

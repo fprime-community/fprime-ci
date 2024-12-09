@@ -1,0 +1,5 @@
+deployment-name: ReferenceDeployment
+dictionary: vxworks/ReferenceDeployment/ReferenceDeploymentDictionary.json
+power-port: -1
+plugin:
+  ci-selection: "null"
