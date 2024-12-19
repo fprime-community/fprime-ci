@@ -45,6 +45,7 @@ class VxWorksDkm(Ci):
         self.port.port = port
         self.port.baudrate = baud
         self.port.rtscts = flow == "yes"
+        self.monitor_fsw_thread = None
 
     def write_to_vxworks(self, message: bytes):
         """ Write to the serial port """
@@ -61,6 +62,14 @@ class VxWorksDkm(Ci):
             timeout=20.0,
             end=lambda line, index: "-> " in line,
             close=False
+        )
+    
+    def monitor_fsw_run(self):
+        """ Wait for the vxprompt to be ready """
+        assert self.port.is_open, "Serial port is not open"
+        self.monitor_fsw_thread = IOLogger.async_communicate(
+            [self.port],
+            [IOLogger(None, logging.DEBUG, logger_name=f"[VxConsole]")],
         )
 
 
@@ -133,8 +142,6 @@ class VxWorksDkm(Ci):
             self.write_to_vxworks(load_string.encode("ascii"))
         except serial.SerialException as exception:
             raise Exception(f"Failed to use serial port: {exception}")
-        finally:
-            self.port.close()
         return context
 
 
@@ -153,16 +160,21 @@ class VxWorksDkm(Ci):
         """
         #TODO: wait for acknowledge
         try:
-            self.port.open()
             self.wait_for_vxprompt()
             load_string = f"sp fsw_main(\"0.0.0.0\", 50000)"
             self.write_to_vxworks(load_string.encode("ascii"))
-            self.wait_for_vxprompt()
+            self.monitor_fsw_run()
         except serial.SerialException as exception:
             raise Exception(f"Failed to use serial port: {exception}")
+        return context
+
+    def cleanup(self, context: dict):
+        """ Cleanup """
+        try:
+            if self.monitor_fsw_thread is not None:
+                IOLogger.join_communication(self.monitor_fsw_thread)
         finally:
             self.port.close()
-        return context
 
     @classmethod
     def get_name(cls):
