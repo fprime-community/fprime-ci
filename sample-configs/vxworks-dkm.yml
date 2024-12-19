@@ -5,6 +5,11 @@ power-port: 0
 # Optional CI system config
 jobs: 4
 
+extra-gds-arguments:
+  - --zmq-transport
+  - ipc:///tmp/fprime-server-ci-in
+  - ipc:///tmp/fprime-server-ci-out
+
 # Plugin CLI arguments
 plugin:
   ci-selection: vxworks-dkm
