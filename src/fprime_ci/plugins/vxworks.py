@@ -155,7 +155,7 @@ class VxWorksDkm(Ci):
         try:
             self.port.open()
             self.wait_for_vxprompt()
-            load_string = f"sp main"
+            load_string = f"sp fsw_main(\"192.168.0.1\", 50000)"
             self.write_to_vxworks(load_string.encode("ascii"))
             self.wait_for_vxprompt()
         except serial.SerialException as exception:
