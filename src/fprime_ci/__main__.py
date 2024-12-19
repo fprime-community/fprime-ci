@@ -48,7 +48,6 @@ def main():
         ci_flow.run(context=initial_config, stages=stages)
     except Exception as exception:
         LOGGER.critical("Failed to run CI: %s", exception)
-        raise
         sys.exit(1)
     sys.exit(0)
 
