@@ -11,7 +11,11 @@ extra-gds-arguments:
   - --zmq-transport
   - ipc:///tmp/fprime-server-ci-in
   - ipc:///tmp/fprime-server-ci-out
-  - --ip-client --ip-address 192.168.0.254 --ip-port 50000
+  - --ip-client
+  - --ip-address
+  - 192.168.0.254
+  - --ip-port
+  - 50000
 
 extra-pytest-arguments:
   - --zmq-transport
