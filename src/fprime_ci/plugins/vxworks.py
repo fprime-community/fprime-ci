@@ -103,7 +103,9 @@ class VxWorksDkm(Ci):
             if destination_path.exists():
                 destination_path.unlink()
             shutil.copy(path, context[VxWorksDkm.Keys.REMOTE_DATA])
-            permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH
+            permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | \
+                          stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP | \
+                          stat.S_IROTH
             os.chmod(destination_path, permissions)
         return context
 
