@@ -7,6 +7,8 @@ infrastructure is available on the host machine:
 1. A docker container running with TFTP and RSH installed
 2. The target hardware bootloader is configured for TFTP boot
 """
+import os
+import stat
 import logging
 import shutil
 import subprocess
@@ -97,7 +99,12 @@ class VxWorksDkm(Ci):
         context["dkm_path"] = f"data/{context[VxWorksDkm.Keys.DEPLOYMENT_NAME]}"
 
         for path in context[Ci.Keys.BUILD_OUTPUTS]:
+            destination_path = Path(context[VxWorksDkm.Keys.REMOTE_DATA]) / path.name
+            if destination_path.exists():
+                destination_path.unlink()
             shutil.copy(path, context[VxWorksDkm.Keys.REMOTE_DATA])
+            permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH
+            os.chmod(destination_path, permissions)
         return context
 
     def load(self, context: dict):

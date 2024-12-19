@@ -59,6 +59,8 @@ class Ci(ABC):
         ENVIRONMENT__ATTRS__ = (False, dict)
         BUILD_OUTPUTS = "build-outputs"
         BUILD_OUTPUTS__ATTRS__ = (False, list)
+        TEST_SCRIPT = "test-script"
+        TEST_SCRIPT__ATTRS__ = (True, str)
 
     @staticmethod
     def subprocess(*args, asynchronous=False, timeout=10, **kwargs):
@@ -352,6 +354,21 @@ class CiFlow(Ci):
             raise CiFailure(exception)
         return context
 
+    @stage
+    def test(self, context: dict):
+        """ Power the target hardware """
+        try:
+            arguments = ["pytest"]
+            if "dictionary" in context:
+                dictionary_path = Path("build-artifacts") / context["dictionary"]
+                arguments += ["--dictionary", str(dictionary_path)]
+            arguments += [context["test-script"]]
+            arguments += context.get("extra-pytest-arguments", [])
+            self.subprocess(arguments, timeout=100)
+        except Exception as exception:
+            raise CiFailure(exception)
+        return context
+
     def cleanup(self, context: dict):
         """ Required shutdown steps """
         failed = False
@@ -379,21 +396,6 @@ class CiFlow(Ci):
             failed = True
         if failed:
             raise CiFailure("Failed to clean-up after CI")
-        return context
-
-    @stage
-    def test(self, context: dict):
-        """ Power the target hardware """
-        try:
-            arguments = ["pytest"]
-            if "dictionary" in context:
-                dictionary_path = Path("build-artifacts") / context["dictionary"]
-                arguments += ["--dictionary", str(dictionary_path)]
-            if "pytest-script" in context:
-                arguments += context["pytest-script"]
-            arguments += context.get("extra-pytest-arguments", [])
-        except Exception as exception:
-            raise CiFailure(exception)
         return context
 
     def run(self, stages=None, context=None):

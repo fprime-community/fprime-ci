@@ -2,10 +2,17 @@
 deployment-name: ReferenceDeployment
 platform-name: vxworks
 power-port: 0
+test-script: ReferenceDeployment/test/int/test.py
+
 # Optional CI system config
 jobs: 4
 
 extra-gds-arguments:
+  - --zmq-transport
+  - ipc:///tmp/fprime-server-ci-in
+  - ipc:///tmp/fprime-server-ci-out
+
+extra-pytest-arguments:
   - --zmq-transport
   - ipc:///tmp/fprime-server-ci-in
   - ipc:///tmp/fprime-server-ci-out
