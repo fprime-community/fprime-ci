@@ -375,7 +375,7 @@ class CiFlow(Ci):
         gds_instance, gds_thread_data = self.gds_data
         # Custom clean-up
         try:
-            context = self.delegate.cleanup(context)
+            self.delegate.cleanup(context)
         except Exception as exception:
             LOGGER.warning("Delegate cleanup failed: %s", exception)
             failed = True

@@ -53,14 +53,14 @@ class VxWorksDkm(Ci):
         LOGGER.debug(">  " + message.decode("ascii").strip())
         self.port.write(message + b"\r\n")
 
-    def wait_for_vxprompt(self):
+    def wait_for_vxprompt(self, prompt="-> "):
         """ Wait for the vxprompt to be ready """
         assert self.port.is_open, "Serial port is not open"
         IOLogger.communicate(
             [self.port],
             [IOLogger(None, logging.DEBUG, logger_name=f"[VxConsole]")],
             timeout=20.0,
-            end=lambda line, index: "-> " in line,
+            end=lambda line, index: prompt in line,
             close=False
         )
     
@@ -116,6 +116,7 @@ class VxWorksDkm(Ci):
                           stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP | \
                           stat.S_IROTH
             os.chmod(destination_path, permissions)
+        os.sync()
         return context
 
     def load(self, context: dict):
@@ -163,6 +164,7 @@ class VxWorksDkm(Ci):
             self.wait_for_vxprompt()
             load_string = f"sp fsw_main(\"0.0.0.0\", 50000)"
             self.write_to_vxworks(load_string.encode("ascii"))
+            self.wait_for_vxprompt("Accepted client")
             self.monitor_fsw_run()
         except serial.SerialException as exception:
             raise Exception(f"Failed to use serial port: {exception}")
@@ -172,7 +174,7 @@ class VxWorksDkm(Ci):
         """ Cleanup """
         try:
             if self.monitor_fsw_thread is not None:
-                IOLogger.join_communication(self.monitor_fsw_thread)
+                IOLogger.join_communicate(self.monitor_fsw_thread)
         finally:
             self.port.close()
 

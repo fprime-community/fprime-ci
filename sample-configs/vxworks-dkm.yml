@@ -16,6 +16,7 @@ extra-gds-arguments:
   - 192.168.0.254
 
 extra-pytest-arguments:
+  - -s
   - --zmq-transport
   - ipc:///tmp/fprime-server-ci-in
   - ipc:///tmp/fprime-server-ci-out
