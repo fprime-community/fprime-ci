@@ -8,18 +8,35 @@ infrastructure is available on the host machine:
 2. The target hardware bootloader is configured for TFTP boot
 """
 import logging
+import shutil
+import subprocess
+from enum import Enum
+from pathlib import Path
 from typing import Type
 import serial
 
 import fprime_gds.plugin.definitions
 from fprime_ci.ci import Ci
 from fprime_ci.plugin.definitions import plugin
+from fprime_ci.utilities import IOLogger
 
 LOGGER = logging.getLogger(__name__)
 
 @plugin
 class VxWorksDkm(Ci):
     """ VxWorks CI plugin implementation supporting DKMs """
+    class Keys(Ci.Keys):
+        """ Additional keys used during the execution of the VxWorks plugin
+
+        These keys are used as constants when accessing context and used to validate context automatically. These keys
+        are supplied in the initial supplied context. To fully understand these keys, see: CiPlugin.Keys for a better
+        description of the usage and format.
+        """
+        VIP_PATH = "vip-path"
+        WR_SHELL_PATH = "wr-shell-path"
+        DTB_NAME = "dtb-name"
+        REMOTE_DATA = "remote-data"
+
     def __init__(self, port, baud, flow:str="no"):
         """  """
         self.port = serial.Serial()
@@ -36,17 +53,14 @@ class VxWorksDkm(Ci):
     def wait_for_vxprompt(self):
         """ Wait for the vxprompt to be ready """
         assert self.port.is_open, "Serial port is not open"
-        message = b""
-        while message != b"-> ":
-            byte_read = self.port.read(1)
-            if len(byte_read) == 1 and byte_read[0] < 128:
-                message += byte_read
-                if byte_read == b"\n":
-                    LOGGER.debug("<  " + message.decode("ascii").strip())
-                    message = b""
-            else:
-                LOGGER.warning("Read non-ascii data from serial port")
-        LOGGER.debug("<  " + message.decode("ascii").strip())
+        IOLogger.communicate(
+            [self.port],
+            [IOLogger(None, logging.DEBUG, logger_name=f"[VxConsole]")],
+            timeout=20.0,
+            end=lambda line, index: "-> " in line,
+            close=False
+        )
+
 
     def build(self, context: dict) -> dict:
         """ Performs the VxWorks build before the standard F Prime build
@@ -61,6 +75,7 @@ class VxWorksDkm(Ci):
         Returns:
             context with optionally set platform, generated_arguments and build_argument
         """
+        subprocess.run([context["wr-shell-path"], "make"], cwd=context[VxWorksDkm.Keys.VIP_PATH]).check_returncode()
         return context
 
     def preload(self, context: dict):
@@ -79,8 +94,10 @@ class VxWorksDkm(Ci):
         Returns:
             context optionally augmented with plugin-specific preload data
         """
-        # TODO: copy files to remoted area and list in context
-        context["dkm_path"] = f"data/{context['deployment-name']}"
+        context["dkm_path"] = f"data/{context[VxWorksDkm.Keys.DEPLOYMENT_NAME]}"
+
+        for path in context[Ci.Keys.BUILD_OUTPUTS]:
+            shutil.copy(path, context[VxWorksDkm.Keys.REMOTE_DATA])
         return context
 
     def load(self, context: dict):

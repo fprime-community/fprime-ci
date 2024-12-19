@@ -1,7 +1,25 @@
+# Required by the CI system
 deployment-name: ReferenceDeployment
-dictionary: vxworks/ReferenceDeployment/ReferenceDeploymentDictionary.json
+platform-name: vxworks
 power-port: 0
+# Optional CI system config
+jobs: 4
+
+# Plugin CLI arguments
 plugin:
   ci-selection: vxworks-dkm
   port: /dev/ttyUSB0
   baud: 115200
+
+# Plugin required keys
+vip-path: /ci/builds/VxWorks7-22.09-BeagleBoneBlack-Image
+dtb-name: am335x-boneblack.dtb
+wr-shell-path: /opt/windriver/22.09/wrenv.linux
+remote-data: /ci/remote-data
+
+build-outputs:
+  - /ci/builds/VxWorks7-22.09-BeagleBoneBlack-Image/default/uVxWorks
+  - /ci/builds/VxWorks7-22.09-BeagleBoneBlack-Image/default/am335x-boneblack.dtb
+environment:
+  VSB_LOCATION: /ci/builds/VxWorks7-22.09-BeagleBoneBlack-Source
+  WIND_HOME: /opt/windriver/22.09
