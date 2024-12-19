@@ -11,6 +11,7 @@ extra-gds-arguments:
   - --zmq-transport
   - ipc:///tmp/fprime-server-ci-in
   - ipc:///tmp/fprime-server-ci-out
+  - --ip-client
 
 extra-pytest-arguments:
   - --zmq-transport
