@@ -14,8 +14,6 @@ extra-gds-arguments:
   - --ip-client
   - --ip-address
   - 192.168.0.254
-  - --ip-port
-  - 50000
 
 extra-pytest-arguments:
   - --zmq-transport
