@@ -177,6 +177,7 @@ class VxWorksDkm(Ci):
                 IOLogger.join_communicate(self.monitor_fsw_thread)
         finally:
             self.port.close()
+        return context
 
     @classmethod
     def get_name(cls):

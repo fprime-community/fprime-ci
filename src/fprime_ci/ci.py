@@ -241,6 +241,8 @@ class CiFlow(Ci):
     def delegate_with_safe_context(self, delegate_method, context):
         """ Delegate to the delegate without allowing corruption to the original context"""
         context = delegate_method(context)
+        if not isinstance(context, dict):
+            raise CiFailure(f"Delegate failed to return context")
         for key, value in self.original_context.items():
             if key not in context or context[key] != value:
                 raise CiFailure(f"Delegate corrupted context: {key} from {value} to {context.get(key, '--deleted--')}")
