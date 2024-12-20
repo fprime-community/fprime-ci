@@ -1,4 +1,5 @@
 """ fprime_ci/ci.py: code for loading software onto target """
+import copy
 import logging
 import os
 import signal
@@ -230,11 +231,20 @@ class CiFlow(Ci):
         """ Initialize flow """
         self.delegate = plugin_delegate
         self.gds_data = (None, None)
+        self.original_context = None
 
     @staticmethod
     def get_stages():
         """ Return the list of annotated stages """
         return _CI_STAGES
+
+    def delegate_with_safe_context(self, delegate_method, context):
+        """ Delegate to the delegate without allowing corruption to the original context"""
+        context = delegate_method(context)
+        for key, value in self.original_context.items():
+            if key not in context or context[key] != value:
+                raise CiFailure(f"Delegate corrupted context: {key} from {value} to {context.get(key, '--deleted--')}")
+        return context
 
     @stage
     def validate(self, context: dict):
@@ -283,7 +293,8 @@ class CiFlow(Ci):
         # Set environment
         for key, value in context.get("environment", {}).items():
             os.environ[key] = value
-
+        # Stash the original context
+        self.original_context = copy.deepcopy(context)
         return context
 
 
@@ -293,7 +304,7 @@ class CiFlow(Ci):
         try:
             self.subprocess(["fprime-util", "generate", "-f"], timeout=60)
             self.subprocess(["fprime-util", "build", "--jobs", str(context.get("jobs", 1))], timeout=60)
-            context = self.delegate.build(context)
+            context = self.delegate_with_safe_context(self.delegate.build, context)
             for build_output in context["build-outputs"]:
                 if not build_output.exists():
                     raise CiFailure(f"Build failed to produce output: '{build_output}'")
@@ -305,7 +316,7 @@ class CiFlow(Ci):
     def preload(self, context: dict):
         """ Preload software on the target hardware before power-on """
         try:
-            context = self.delegate.preload(context)
+            context = self.delegate_with_safe_context(self.delegate.preload, context)
         except Exception as exception:
             raise CiFailure(exception)
         return context
@@ -340,7 +351,7 @@ class CiFlow(Ci):
     def load(self, context: dict):
         """ Load the software on the target hardware """
         try:
-            context = self.delegate.load(context)
+            context = self.delegate_with_safe_context(self.delegate.load, context)
         except Exception as exception:
             raise CiFailure(exception)
         return context
@@ -349,7 +360,7 @@ class CiFlow(Ci):
     def launch(self, context: dict):
         """ Launch the software on the target hardware """
         try:
-            context = self.delegate.launch(context)
+            context = self.delegate_with_safe_context(self.delegate.launch, context)
         except Exception as exception:
             raise CiFailure(exception)
         return context
@@ -375,7 +386,7 @@ class CiFlow(Ci):
         gds_instance, gds_thread_data = self.gds_data
         # Custom clean-up
         try:
-            self.delegate.cleanup(context)
+            context = self.delegate_with_safe_context(self.delegate.cleanup, context)
         except Exception as exception:
             LOGGER.warning("Delegate cleanup failed: %s", exception)
             failed = True
