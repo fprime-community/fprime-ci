@@ -14,6 +14,8 @@ extra-gds-arguments:
   - --ip-client
   - --ip-address
   - 192.168.0.254
+  - --gui-port
+  - 4444
 
 extra-pytest-arguments:
   - -s
