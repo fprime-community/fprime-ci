@@ -9,15 +9,4 @@ fprime_gds.plugin.definitions.PLUGIN_NAME = "fprime_ci" # Monkey-patch the plugi
 
 from fprime_gds.plugin.definitions import gds_plugin_implementation as ci_plugin_implementation
 from fprime_gds.plugin.definitions import gds_plugin_specification as ci_plugin_specification
-from fprime_gds.plugin.definitions import PluginType
-
-def plugin(plugin_class):
-    """ Decorator for plugin class"""
-    @ci_plugin_implementation
-    def register_ci_plugin(cls) -> Type["Ci"]:
-        """ Allows loading of Ci plugin"""
-        return plugin_class
-
-    plugin_class.register_ci_plugin = register_ci_plugin
-    plugin_class.register_ci_plugin = classmethod(plugin_class. register_ci_plugin)
-    return plugin_class
+from fprime_gds.plugin.definitions import PluginType,gds_plugin as plugin

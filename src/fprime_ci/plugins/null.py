@@ -5,7 +5,7 @@ from typing import Type
 from fprime_ci.plugin.definitions import ci_plugin_implementation, plugin
 from fprime_ci.ci import Ci
 
-@plugin
+@plugin(Ci)
 class Null(Ci):
     """ NullPlugin - prints out steps """
 

@@ -12,6 +12,7 @@ LOGGER = logging.getLogger(__name__)
 
 import fprime_gds.executables.cli
 from fprime_ci.ci import CiFlow
+from fprime_ci.plugin.system import Plugins
 
 def parse_args():
     """ Parse command line arguments """
@@ -33,13 +34,13 @@ def main():
     initial_config, plugin_args = parse_args()
     args, _ = fprime_gds.executables.cli.ParserBase.parse_args(
         [
-            fprime_gds.executables.cli.PluginArgumentParser,
+            fprime_gds.executables.cli.PluginArgumentParser(Plugins.system()),
         ],
         arguments=plugin_args,
         description="F Prime CI system"
     )
     LOGGER.info(f"Starting CI for '{args.ci_selection}'")
-    plugin = args.ci_selection_instance
+    plugin = Plugins.system().get_selected_class("ci")()
 
     ci_flow = CiFlow(plugin)
     try:

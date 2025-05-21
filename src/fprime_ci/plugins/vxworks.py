@@ -24,7 +24,7 @@ from fprime_ci.utilities import IOLogger
 
 LOGGER = logging.getLogger(__name__)
 
-@plugin
+@plugin(Ci)
 class VxWorksDkm(Ci):
     """ VxWorks CI plugin implementation supporting DKMs """
     class Keys(Ci.Keys):
