@@ -5,7 +5,6 @@ it all work. This file sets up plugin definitions and performs the necessary mon
 """
 from typing import Type
 import fprime_gds.plugin.definitions
-fprime_gds.plugin.definitions.PLUGIN_NAME = "fprime_ci" # Monkey-patch the plugin-system name
 
 from fprime_gds.plugin.definitions import gds_plugin_implementation as ci_plugin_implementation
 from fprime_gds.plugin.definitions import gds_plugin_specification as ci_plugin_specification

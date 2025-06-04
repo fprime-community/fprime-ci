@@ -7,7 +7,7 @@ import fprime_gds.plugin.system # Borrow the fprime GDS plugin system
 # Usable types
 from fprime_ci.plugin.definitions import PluginType
 from fprime_ci.plugins.null import Null
-from fprime_ci.plugins.vxworks import VxWorksDkm
+#from fprime_ci.plugins.vxworks import VxWorksDkm
 from fprime_ci.ci import Ci
 
 class Plugins(fprime_gds.plugin.system.Plugins):
@@ -18,7 +18,7 @@ class Plugins(fprime_gds.plugin.system.Plugins):
                 "ci": {
                 "class": Ci,
                 "type": PluginType.SELECTION,
-                "built-in": [Null, VxWorksDkm]
+                "built-in": [Null]
                 }
             }
         return (

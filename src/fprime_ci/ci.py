@@ -7,7 +7,7 @@ import time
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Type
+from typing import Callable, Type
 from fprime_ci.plugin.definitions import ci_plugin_specification
 from fprime_ci.utilities import IOLogger, Stream
 
@@ -55,7 +55,7 @@ class Ci(ABC):
         DEPLOYMENT_NAME = "deployment-name"
         PLATFORM_NAME = "platform-name"
         POWER_PORT = "power-port"
-        POWER_PORT__ATTRS__ = (True, int)
+        POWER_PORT__ATTRS__ = (False, int)
         ENVIRONMENT = "environment"
         ENVIRONMENT__ATTRS__ = (False, dict)
         BUILD_OUTPUTS = "build-outputs"
@@ -64,14 +64,15 @@ class Ci(ABC):
         TEST_SCRIPT__ATTRS__ = (True, str)
 
     @staticmethod
-    def subprocess(*args, asynchronous=False, timeout=10, **kwargs):
+    def subprocess(*args, asynchronous=False, timeout=10, capture=(False, False), **kwargs):
         """ subprocess.run wrapper to enforce timeouts and logging
 
         Wraps subprocess.run. Ensures that there is some specified timeout for the process to run so as not to bog down
         CI. Will also capture standard out/standard error and pass these units into the logging utility.
 
         Args:
-            timeout (int): Timeout in seconds.
+            timeout (int): Timeout in seconds. Default: 10
+            capture: capture output for post processing
             *args: additional positional arguments to pass to subprocess.run
             asynchronous: run asynchronously as a thread
             **kwargs: additional keyword arguments to pass to subprocess.run
@@ -83,14 +84,18 @@ class Ci(ABC):
             kwargs["stderr"] = subprocess.PIPE
         LOGGER.debug("Running: %s", invocation)
         process = subprocess.Popen(*args, **kwargs, text=True)
+        
+        stdout_logger = IOLogger(Stream.OUT, logging.DEBUG, logger_name=f"[{invocation[:20]}]", prefix="[stdout]", capture=capture[0])
+        stderr_logger = IOLogger(Stream.ERROR, logging.ERROR, logger_name=f"[{invocation[:20]}]", prefix="[stderr]", capture=capture[1])
+
         io_parameters = (
             [
                 process.stdout,
                 process.stderr,
             ],
             [
-                IOLogger(Stream.OUT, logging.DEBUG, logger_name=f"[{invocation[:20]}]", prefix="[stdout]"),
-                IOLogger(Stream.ERROR, logging.ERROR, logger_name=f"[{invocation[:20]}]", prefix="[stderr]"),
+                stdout_logger,
+                stderr_logger,
             ]
         )
         if asynchronous:
@@ -113,7 +118,17 @@ class Ci(ABC):
                 LOGGER.warning("Timeout of %f more than double actual runtime of %f for '%s'",
                                timeout, runtime, invocation)
             return_value = runtime
-        return process, return_value
+        return process, return_value, (stdout_logger.data, stderr_logger.data)
+
+    def wait_until(self, closure: Callable[None, None], timeout=float):
+        """ Wait until function passes or timeout is hit """
+        time_start = time.time()
+        while time.time() < (time_start + timeout):
+            if closure():
+                return
+            time.sleep(0.1)
+        raise TimeoutError()
+
 
     def build(self, context: dict) -> dict:
         """ Plugin override for setting up the build
@@ -230,7 +245,7 @@ class CiFlow(Ci):
     def __init__(self, plugin_delegate: Ci):
         """ Initialize flow """
         self.delegate = plugin_delegate
-        self.gds_data = (None, None)
+        self.gds_data = (None, None, (None, None))
         self.original_context = None
 
     @staticmethod
@@ -304,8 +319,15 @@ class CiFlow(Ci):
     def build(self, context: dict):
         """ Build the software on the target hardware """
         try:
-            self.subprocess(["fprime-util", "generate", "-f"], timeout=60)
-            self.subprocess(["fprime-util", "build", "--jobs", str(context.get("jobs", 1))], timeout=60)
+            # Generate F Prime
+            generate_arguments = ["fprime-util", "generate", "-f"]
+            generate_arguments += context.get("extra-generate-arguments", [])
+            self.subprocess(generate_arguments, timeout=60)
+            # Build F Prime
+            build_arguments = ["fprime-util", "build", "--jobs", str(context.get("jobs", 1))]
+            build_arguments += context.get("extra-build-arguments", [])
+            self.subprocess(build_arguments, timeout=60)
+            # Custom build steps
             context = self.delegate_with_safe_context(self.delegate.build, context)
             for build_output in context["build-outputs"]:
                 if not build_output.exists():
@@ -344,7 +366,8 @@ class CiFlow(Ci):
     def power(self, context: dict):
         """ Power the target hardware """
         try:
-            setPowerOutletState("192.168.0.100", "admin", "1234", context["power-port"], True)
+            if "power-port" in context:
+                setPowerOutletState("192.168.0.100", "admin", "1234", context["power-port"], True)
         except Exception as exception:
             raise CiFailure(exception)
         return context
@@ -385,7 +408,7 @@ class CiFlow(Ci):
     def cleanup(self, context: dict):
         """ Required shutdown steps """
         failed = False
-        gds_instance, gds_thread_data = self.gds_data
+        gds_instance, gds_thread_data, _ = self.gds_data
         # Custom clean-up
         try:
             context = self.delegate_with_safe_context(self.delegate.cleanup, context)
@@ -403,7 +426,8 @@ class CiFlow(Ci):
             failed = True
         # Turn off power port
         try:
-            setPowerOutletState("192.168.0.100", "admin", "1234", context["power-port"], False)
+            if self.Keys.POWER_PORT in context:
+                setPowerOutletState("192.168.0.100", "admin", "1234", context["power-port"], False)
         except Exception as exception:
             LOGGER.warning("Power-off outlet state failed: %s", exception)
             failed = True
@@ -415,6 +439,7 @@ class CiFlow(Ci):
         """ Run through the CI flow """
         stages = stages or _CI_STAGES
         context = context or {}
+
 
         try:
             for stage in stages:

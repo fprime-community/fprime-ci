@@ -23,7 +23,7 @@ class IOLogger(IOBase):
     is limited to that scope.
     """
 
-    def __init__(self, interceptee: Stream, severity: int, logger_name:str=None, prefix: str=""):
+    def __init__(self, interceptee: Stream, severity: int, logger_name:str=None, prefix: str="", capture=False):
         """ Initialize this logger
 
         Initializes this logger to intercept `interceptee` and log it at the supplied `severity`. Since this is a
@@ -42,6 +42,8 @@ class IOLogger(IOBase):
         self.buffer = ""
         self.original = None
         self.prefix = prefix
+        self.data = ""
+        self.capture = capture
 
     def write(self, data: Union[str, bytes]):
         """ Handle the incoming 'write' data
@@ -52,7 +54,10 @@ class IOLogger(IOBase):
         Args:
             data: str or bytes to intercept
         """
-        self.buffer += data if isinstance(data, str) else data.decode(errors="replace")
+        new_data = data if isinstance(data, str) else data.decode(errors="replace")
+        self.buffer += new_data
+        if self.capture:
+            self.data += new_data
         lines = self.buffer.split("\n")
         self.buffer = lines[-1]
         # Log out complete lines
