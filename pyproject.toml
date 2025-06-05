@@ -7,7 +7,7 @@ name = "fprime-ci"
 dynamic = ["version"]
 description = "F Prime CI Tooling suite"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {file = "LICENSE.txt"}
 keywords = ["fprime", "embedded", "nasa", "flight", "software"]
 authors = [
@@ -40,8 +40,8 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://fprime.jpl.nasa.gov"
-Documentation = "https://nasa.github.io/fprime/"
-Repository = "https://github.jpl.nasa.gov/FPRIME/ci-tools"
+Documentation = "https://fprime.jpl.nasa.gov/docs"
+Repository = "https://github.com/fprime-community/fprime-ci"
 
 ####
 # Entry Points:
@@ -52,9 +52,6 @@ Repository = "https://github.jpl.nasa.gov/FPRIME/ci-tools"
 [project.scripts]
 fprime-ci = "fprime_ci.__main__:main"
 fprime-ci-power = "fprime_ci.power:main"
-
-[project.entry-points.fprime_gds]
-vxworks = "fprime_ci.plugins.vxworks:VxWorksDkm"
 
 ####
 # setuptools_scm dynamically generates version number from git, as well as automatically

@@ -3,9 +3,6 @@
 The F Prime GDS provides a plugin system, however; to reuse it in CI some changes (monkey patches) are required to make
 it all work. This file sets up plugin definitions and performs the necessary monkey patching.
 """
-from typing import Type
-import fprime_gds.plugin.definitions
-
 from fprime_gds.plugin.definitions import gds_plugin_implementation as ci_plugin_implementation
 from fprime_gds.plugin.definitions import gds_plugin_specification as ci_plugin_specification
-from fprime_gds.plugin.definitions import PluginType,gds_plugin as plugin
+from fprime_gds.plugin.definitions import PluginType, gds_plugin as plugin
