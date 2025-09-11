@@ -28,7 +28,7 @@ class StageParser(ParserBase):
             ("--add-stage", ): {
                 "dest": "stages",
                 "action": "append",
-                "default": CiFlow.get_stages(),
+                "default": [],
                 "choices": CiFlow.get_stages(),
                 "help": "Add a stage to run. When no --add-stage supplied, all will run",
             },
@@ -42,6 +42,11 @@ class StageParser(ParserBase):
     
     def handle_arguments(self, args, **kwargs):
         """ Handle the arguments """
+        # First, determine if we are using the whole list, or the supplied list
+        args.stages = CiFlow.get_stages() if len(args.stages) == 0 else args.stages
+        # Next, reorder with respect to CiFlow.get_stages() order
+        args.stages = [stage for stage in CiFlow.get_stages() if stage in args.stages]
+        # Finally, skip any skipped stages
         args.stages = [stage for stage in args.stages if stage not in args.skip_stage]
         return args
 
@@ -56,7 +61,7 @@ def main():
         ],
         description="F Prime CI system"
     )
-    LOGGER.info(f"Starting CI for '{args.ci_selection}'")
+    LOGGER.info(f"Starting CI for '{args.ci_selection}' and stages '{', '.join(args.stages)}'")
     plugin = Plugins.system().get_selected_class("ci")()
 
     ci_flow = CiFlow(plugin)

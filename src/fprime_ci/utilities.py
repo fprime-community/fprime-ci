@@ -65,7 +65,7 @@ class IOLogger(IOBase):
             self.logger.log(self.severity, f"{self.prefix}{line}")
 
     @staticmethod
-    def communicate(file_descriptors: list, loggers: List["IOLogger"], timeout:float=10, end=None, close:int=True):
+    def communicate(file_descriptors: list, loggers: List["IOLogger"], timeout:float=10, end=None, close:bool=True):
         """
         Communicates with a process while assuring that output is captured and optionally printed. This will buffer
         lines for the standard out file handle when not none, and will always buffer standard error so that it can be
@@ -117,7 +117,7 @@ class IOLogger(IOBase):
                 for key, _ in events:
                     index, io_logger = key.data
                     try:
-                        read_data = key.fileobj.read(1)
+                        read_data = key.fileobj.read()
                         read_data = read_data if isinstance(read_data, str) else read_data.decode(errors="replace")
                     # Some systems (like running inside Docker) raise an io error instead of returning "" when the device
                     # is ended. Not sure why this is, but the effect is the same, on IOError assume end-of-input

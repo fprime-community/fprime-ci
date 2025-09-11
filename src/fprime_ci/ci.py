@@ -60,8 +60,8 @@ class Ci(ABC):
         ENVIRONMENT__ATTRS__ = (False, dict)
         BUILD_OUTPUTS = "build-outputs"
         BUILD_OUTPUTS__ATTRS__ = (False, list)
-        TEST_SCRIPT = "test-script"
-        TEST_SCRIPT__ATTRS__ = (True, str)
+        TEST_SCRIPT = "test-scripts"
+        TEST_SCRIPT__ATTRS__ = (True, list)
 
     @staticmethod
     def subprocess(*args, asynchronous=False, timeout=10, capture=(False, False), **kwargs):
@@ -398,9 +398,8 @@ class CiFlow(Ci):
             if "dictionary" in context:
                 dictionary_path = Path("build-artifacts") / context["dictionary"]
                 arguments += ["--dictionary", str(dictionary_path)]
-            arguments += [context["test-script"]]
             arguments += context.get("extra-pytest-arguments", [])
-            self.subprocess(arguments, timeout=100)
+            self.subprocess(arguments + context["test-scripts"], timeout=100)
         except Exception as exception:
             raise CiFailure(exception)
         return context
