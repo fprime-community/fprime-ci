@@ -270,7 +270,6 @@ class CiFlow(Ci):
                 raise CiFailure(f"Delegate corrupted context: {key} from {value} to {context.get(key, '--deleted--')}")
         return context
 
-    @stage
     def validate(self, context: dict):
         """ Validate the initial context
 
@@ -312,7 +311,7 @@ class CiFlow(Ci):
                 build_relative_base / "bin" / context['deployment-name']
         )
         # Calculate the required build outputs
-        context["build-outputs"] = [Path.cwd() / output for output in context.get("build-outputs", [])] + \
+        context[Ci.Keys.BUILD_OUTPUTS] = [Path.cwd() / output for output in context.get(Ci.Keys.BUILD_OUTPUTS, [])] + \
                 [context["dictionary"], context["executable"]]
         # Set environment
         for key, value in context.get("environment", {}).items():
@@ -336,7 +335,7 @@ class CiFlow(Ci):
             self.subprocess(build_arguments, timeout=60)
             # Custom build steps
             context = self.delegate_with_safe_context(self.delegate.build, context)
-            for build_output in context["build-outputs"]:
+            for build_output in context[Ci.Keys.BUILD_OUTPUTS]:
                 if not build_output.exists():
                     raise CiFailure(f"Build failed to produce output: '{build_output}'")
         except Exception as exception:
@@ -464,6 +463,7 @@ class CiFlow(Ci):
 
 
         try:
+            context = self.validate(context)
             for stage in stages:
                 LOGGER.info("Running stage: %s", stage)
                 try:
