@@ -4,6 +4,7 @@ import logging
 import os
 import signal
 import time
+import tarfile
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -56,12 +57,18 @@ class Ci(ABC):
         PLATFORM_NAME = "platform-name"
         POWER_PORT = "power-port"
         POWER_PORT__ATTRS__ = (False, int)
+        JOBS = "jobs"
+        JOBS__ATTRS__ = (False, int)
         ENVIRONMENT = "environment"
         ENVIRONMENT__ATTRS__ = (False, dict)
         BUILD_OUTPUTS = "build-outputs"
         BUILD_OUTPUTS__ATTRS__ = (False, list)
-        TEST_SCRIPT = "test-scripts"
-        TEST_SCRIPT__ATTRS__ = (True, list)
+        ARCHIVE_PATH = "archive-path"
+        ARCHIVE_PATH__ATTRS__ = (False, str)
+        EXTRA_ARCHIVE_FILES = "extra-archive-files"
+        EXTRA_ARCHIVE_FILES__ATTRS__ = (False, list)
+        TEST_SCRIPTS = "test-scripts"
+        TEST_SCRIPTS__ATTRS__ = (True, list)
 
     @staticmethod
     def subprocess(*args, asynchronous=False, timeout=10, capture=(False, False), **kwargs):
@@ -246,7 +253,6 @@ class CiFlow(Ci):
         """ Initialize flow """
         self.delegate = plugin_delegate
         self.gds_data = (None, None, (None, None))
-        self.original_context = None
 
     @staticmethod
     def get_stages():
@@ -255,10 +261,11 @@ class CiFlow(Ci):
 
     def delegate_with_safe_context(self, delegate_method, context):
         """ Delegate to the delegate without allowing corruption to the original context"""
+        original_context = copy.deepcopy(context)
         context = delegate_method(context)
         if not isinstance(context, dict):
             raise CiFailure(f"Delegate failed to return context")
-        for key, value in self.original_context.items():
+        for key, value in original_context.items():
             if key not in context or context[key] != value:
                 raise CiFailure(f"Delegate corrupted context: {key} from {value} to {context.get(key, '--deleted--')}")
         return context
@@ -310,8 +317,6 @@ class CiFlow(Ci):
         # Set environment
         for key, value in context.get("environment", {}).items():
             os.environ[key] = value
-        # Stash the original context
-        self.original_context = copy.deepcopy(context)
         return context
 
 
@@ -324,7 +329,9 @@ class CiFlow(Ci):
             generate_arguments += context.get("extra-generate-arguments", [])
             self.subprocess(generate_arguments, timeout=60)
             # Build F Prime
-            build_arguments = ["fprime-util", "build", "--jobs", str(context.get("jobs", 1))]
+            build_arguments = ["fprime-util", "build"]
+            if Ci.Keys.JOBS in context:
+                build_arguments.extend(["--jobs", str(context.get(Ci.Keys.JOBS, 1))])
             build_arguments += context.get("extra-build-arguments", [])
             self.subprocess(build_arguments, timeout=60)
             # Custom build steps
@@ -399,10 +406,25 @@ class CiFlow(Ci):
                 dictionary_path = Path("build-artifacts") / context["dictionary"]
                 arguments += ["--dictionary", str(dictionary_path)]
             arguments += context.get("extra-pytest-arguments", [])
-            self.subprocess(arguments + context["test-scripts"], timeout=100)
+            self.subprocess(arguments + context[Ci.Keys.TEST_SCRIPTS], timeout=100)
         except Exception as exception:
             raise CiFailure(exception)
         return context
+    
+    def archive(self, context: dict):
+        """ Archive the build outputs """
+        if Ci.Keys.ARCHIVE_PATH not in context:
+            return
+        archival_bits = [
+            *context.get(Ci.Keys.BUILD_OUTPUTS, []),
+            *context.get(Ci.Keys.TEST_SCRIPTS, []),
+            *context.get(Ci.Keys.EXTRA_ARCHIVE_FILES, []),
+            "./build-artifacts"
+        ]
+        archive_path = context[Ci.Keys.ARCHIVE_PATH]
+        with tarfile.open(archive_path, f"w:{Path(archive_path).suffix.lstrip('.')}") as archive_handle:
+            for bit in [bit for bit in archival_bits if Path(bit).exists]:
+                archive_handle.add(bit, arcname=Path(bit).name)
 
     def cleanup(self, context: dict):
         """ Required shutdown steps """
@@ -430,6 +452,7 @@ class CiFlow(Ci):
         except Exception as exception:
             LOGGER.warning("Power-off outlet state failed: %s", exception)
             failed = True
+        self.archive(context)
         if failed:
             raise CiFailure("Failed to clean-up after CI")
         return context
