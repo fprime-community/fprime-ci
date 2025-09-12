@@ -317,7 +317,7 @@ class CiFlow(Ci):
         for key, value in context.get("environment", {}).items():
             os.environ[key] = value
         archive_path = context.get(Ci.Keys.ARCHIVE_PATH, "")
-        if Ci.Keys.ARCHIVE_PATH in context and Path(archive_path).exists:
+        if Ci.Keys.ARCHIVE_PATH in context and Path(archive_path).exists():
             with tarfile.open(archive_path, "r:*") as archive_handle:
                 archive_handle.extractall()
         return context
@@ -426,7 +426,7 @@ class CiFlow(Ci):
         ]
         archive_path = context[Ci.Keys.ARCHIVE_PATH]
         with tarfile.open(archive_path, f"w:{Path(archive_path).suffix.lstrip('.')}") as archive_handle:
-            for bit in [bit for bit in archival_bits if Path(bit).exists]:
+            for bit in [bit for bit in archival_bits if Path(bit).exists()]:
                 archive_handle.add(bit, arcname=Path(bit).name)
 
     def cleanup(self, context: dict):
