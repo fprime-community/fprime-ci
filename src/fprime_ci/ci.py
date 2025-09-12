@@ -316,6 +316,10 @@ class CiFlow(Ci):
         # Set environment
         for key, value in context.get("environment", {}).items():
             os.environ[key] = value
+        archive_path = context.get(Ci.Keys.ARCHIVE_PATH, "")
+        if Ci.Keys.ARCHIVE_PATH in context and Path(archive_path).exists:
+            with tarfile.open(archive_path, "r:*") as archive_handle:
+                archive_handle.extractall()
         return context
 
 
