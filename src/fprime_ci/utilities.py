@@ -85,7 +85,7 @@ class IOLogger(IOBase):
         #
         # Selection blocks on the read of any file descriptor, and then passes off the execution to the below code
         # with a key that represents which descriptor was the one available to read without blocking.
-        selector = selectors.DefaultSelector()
+        selector = selectors.SelectSelector()
         for index, (file_descriptor, logger) in enumerate(zip(file_descriptors, loggers)):
             selector.register(file_descriptor, selectors.EVENT_READ, data=(index, logger))
 
@@ -113,7 +113,10 @@ class IOLogger(IOBase):
             while not done(last_line, index):
                 # This line *BLOCKS* until on of the above registered handles is available to read. Then a set of events is
                 # returned signaling that a given object is available for IO.
-                events = selector.select(timeout=0.010) # Timeout after 10ms to keep polling done
+                try:
+                    events = selector.select(timeout=0.010) # Timeout after 10ms to keep polling done
+                except OSError:
+                    break
                 for key, _ in events:
                     index, io_logger = key.data
                     try:
