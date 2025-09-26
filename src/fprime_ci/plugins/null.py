@@ -25,7 +25,7 @@ class Null(Ci):
         Returns:
             context with optionally set platform, generated_arguments and build_argument
         """
-        print(f"[INFO] Build step run with context:\n{json.dumps(context, indent=4)}")
+        print(f"[INFO] Build step run with context:\n{json.dumps(context, indent=4, default=str)}")
         return context
 
     def preload(self, context: dict):
@@ -44,7 +44,7 @@ class Null(Ci):
         Returns:
             context optionally augmented with plugin-specific preload data
         """
-        print(f"[INFO] Preload run with context:\n{json.dumps(context, indent=4)}")
+        print(f"[INFO] Preload run with context:\n{json.dumps(context, indent=4, default=str)}")
         return context
 
     def load(self, context: dict):
@@ -64,7 +64,7 @@ class Null(Ci):
         Returns:
             context optionally augmented with plugin-specific preload data
         """
-        print(f"[INFO] Load run with context:\n{json.dumps(context, indent=4)}")
+        print(f"[INFO] Load run with context:\n{json.dumps(context, indent=4, default=str)}")
         return context
 
     def launch(self, context: dict):
@@ -80,7 +80,7 @@ class Null(Ci):
         Args:
             context: build context aggregated across all build steps
         """
-        print(f"[INFO] Preload run with context:\n{json.dumps(context, indent=4)}")
+        print(f"[INFO] Preload run with context:\n{json.dumps(context, indent=4, default=str)}")
         return context
 
     @classmethod
