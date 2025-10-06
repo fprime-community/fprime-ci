@@ -62,7 +62,8 @@ class IOLogger(IOBase):
         self.buffer = lines[-1]
         # Log out complete lines
         for line in lines[:-1]:
-            self.logger.log(self.severity, f"{self.prefix}{line}")
+            if len(line.strip()) > 0:
+                self.logger.log(self.severity, f"{self.prefix}{line}")
 
     @staticmethod
     def communicate(file_descriptors: list, loggers: List["IOLogger"], timeout:float=10, end=None, close:bool=True):
